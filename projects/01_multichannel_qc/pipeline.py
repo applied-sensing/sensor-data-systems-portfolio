@@ -14,6 +14,7 @@ from core.qc.dropout_detection import fraction_zeros_per_channel
 from core.qc.dead_channel_detection import dead_channels_by_rms, dead_channels_by_zero_fraction
 from core.qc.outlier_detection import robust_channel_outliers
 from core.qc.dropout_segments import find_zero_dropouts
+from core.qc.invalid_detection import nan_fraction_per_channel, invalid_channels_by_nan_fraction
 from core.visualization.qc_plots import save_rms_bar, save_channel_time_heatmap
 from core.utils.logging import info
 
@@ -21,13 +22,15 @@ def _write_md_report(out_path: Path, payload: dict) -> None:
     dead = payload["flags"]["dead_channels"]
     outliers = payload["flags"]["rms_outliers"]
     segments = payload["dropout_segments"]
-
+    invalid = payload["flags"].get("invalid_channels", [])
+    
     lines: list[str] = []
     lines.append("# QC Report — Multichannel baseline\n\n")
     lines.append(f"- Samples: **{payload['shape'][0]}**\n")
     lines.append(f"- Channels: **{payload['shape'][1]}**\n\n")
 
     lines.append("## Flags\n\n")
+    lines.append(f"- Invalid channels (NaN fraction): **{invalid}**\n")
     lines.append(f"- Dead channels (any criterion): **{dead}**\n")
     lines.append(f"- RMS outliers (robust z-score): **{outliers}**\n\n")
 
@@ -60,6 +63,8 @@ def main() -> None:
 
     rms = rms_per_channel(x)
     frac0 = fraction_zeros_per_channel(x)
+    frac_nan = nan_fraction_per_channel(x)
+
 
     dead_rms_mask = dead_channels_by_rms(x, min_rms=float(qc_cfg["dead_channel"]["min_rms"]))
     dead_zero_mask = dead_channels_by_zero_fraction(x, max_zero_fraction=float(qc_cfg["dead_channel"]["max_zero_fraction"]))
@@ -69,13 +74,21 @@ def main() -> None:
 
     segments = find_zero_dropouts(x, min_len=int(qc_cfg["dropouts"]["min_len_samples"]))
 
+    invalid_mask = invalid_channels_by_nan_fraction(
+        x,
+        max_nan_fraction=float(qc_cfg["invalid"]["max_nan_fraction"]),
+    )
+
+
     payload = {
         "shape": [int(x.shape[0]), int(x.shape[1])],
         "metrics": {
             "rms_per_channel": rms.astype(float).tolist(),
             "fraction_zeros_per_channel": frac0.astype(float).tolist(),
+            "nan_fraction_per_channel": frac_nan.astype(float).tolist(),
         },
         "flags": {
+            "invalid_channels": np.flatnonzero(invalid_mask).astype(int).tolist(),
             "dead_channels_by_rms": np.flatnonzero(dead_rms_mask).astype(int).tolist(),
             "dead_channels_by_zero_fraction": np.flatnonzero(dead_zero_mask).astype(int).tolist(),
             "dead_channels": np.flatnonzero(dead_any).astype(int).tolist(),
