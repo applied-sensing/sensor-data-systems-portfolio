@@ -10,7 +10,8 @@ qc:
     rms_z_thresh: 4.0
   dropouts:
     min_len_samples: 10
-
+  invalid:
+    max_nan_fraction: 0.0
 output:
   out_dir: "projects/01_multichannel_qc/output"
   make_figures: true
