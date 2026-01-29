@@ -1,0 +1,10 @@
+data:
+  path: "datasets/synthetic/multichannel_noise.npy"
+  sampling_rate_hz: 1000.0
+
+qc:
+  rms: true
+  fraction_zeros: true
+
+output:
+  out_dir: "pipelines/batch_validation/output"

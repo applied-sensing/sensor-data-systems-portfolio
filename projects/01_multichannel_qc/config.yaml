@@ -1,0 +1,16 @@
+data:
+  path: "datasets/synthetic/multichannel_noise.npy"
+  sampling_rate_hz: 1000.0
+
+qc:
+  dead_channel:
+    min_rms: 0.05
+    max_zero_fraction: 0.95
+  outliers:
+    rms_z_thresh: 4.0
+  dropouts:
+    min_len_samples: 10
+
+output:
+  out_dir: "projects/01_multichannel_qc/output"
+  make_figures: true
